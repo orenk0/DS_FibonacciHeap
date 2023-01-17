@@ -13,4 +13,5 @@ List of functions to implement:
  - [ ] totalLinks
  - [ ] totalCuts
  - [ ] kMin
+
 For more info on a function please refer to the [./docs](./docs) directory
