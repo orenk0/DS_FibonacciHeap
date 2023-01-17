@@ -1,0 +1,2 @@
+Complexity: O(1)
+Discription: Simply checks whether the size attribute of the heap is 0 or not.

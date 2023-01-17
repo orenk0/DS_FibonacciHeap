@@ -1,0 +1,2 @@
+Complexity: O(1)
+Discription: If the heap is empty then set it as the first and min. Else sets as first, and sets the first tree and its left neighbor as the neighbors of this new first tree. Also changes size by 1.
