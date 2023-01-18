@@ -1,0 +1,2 @@
+Complexity: O(1)
+Discription: Simply returns the stored min node.

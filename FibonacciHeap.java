@@ -1,3 +1,4 @@
+import java.lang.Math.*;
 /**
  * FibonacciHeap
  *
@@ -12,6 +13,25 @@ public class FibonacciHeap
 	public FibonacciHeap() {
 		this.size = 0;
 	}
+	public void setSize(int s) {
+		this.size = s;
+	}
+	public void setFirst(HeapNode f) {
+		this.first = f;
+	}
+	public void setMin(HeapNode m) {
+		this.min = m;
+	}
+	public int getSize() {
+		return this.size;
+	}
+	public HeapNode getFirst() {
+		return this.first;
+	}
+	public HeapNode getMin() {
+		return this.min;
+	}
+	
 	
    /**
     * public boolean isEmpty()
@@ -45,6 +65,8 @@ public class FibonacciHeap
     	}
     	node.setLeft(first.getLeft());
     	node.setRight(first);
+    	first.getLeft().setRight(node);
+    	first.setLeft(node);
     	this.size++;
     	this.first = node;
     	if(this.min.getKey()>key) this.min = node;
@@ -59,8 +81,156 @@ public class FibonacciHeap
     */
     public void deleteMin()
     {
-     	return; // should be replaced by student code
+    	//separated cases:
+     	if(this.isEmpty()) return;
      	
+     	if(this.size==1) {
+     		this.first = null;
+     		this.min = null;
+     		this.size = 0;
+     		return;
+     	}
+     	//melding children:
+     	if(this.min.getChild()!=null) {
+	     	this.min.getLeft().setRight(this.min.getChild());
+	     	this.min.getRight().setLeft(this.min.getChild().getLeft());
+	     	HeapNode tempPrevLeft = this.min.getChild().getLeft();
+	     	this.min.getChild().setLeft(this.min.getLeft());
+	     	tempPrevLeft.setRight(this.min.getRight());
+     	}else if(this.min.getRight()!=null){
+     		this.min.getLeft().setRight(this.min.getRight());
+     		this.min.getRight().setLeft(this.min.getLeft());
+     	}
+     	
+     	
+     	
+     	//creating the array of the "buckets" (max rank is log_{phi}(n); I took log_{1.6}(n) which is even larger):
+     	HeapNode[] buckets = new HeapNode[(int)(1+Math.log(this.size)/Math.log(1.6))];//same as log_{1.6}(n)
+     	//iterating over the forest and linking trees with the same rank (consolidate). also finding new min node and deleting min as a parent:
+     	int minVal = this.first.getKey();
+     	HeapNode cur = this.first;
+     	HeapNode next;
+     	while(cur.getRight()!=cur){//different node than first:
+     		if(cur.getParent()==this.min) cur.setParent(null);
+     		next = cur.getRight();
+     		if(cur.getKey()<minVal) {//updating min.
+     			minVal = cur.getKey();
+     		}
+     		insertNodeToBuckets(buckets, cur);
+     		cur=next;
+     	}
+     	//one more iteration 
+     	if(cur.getParent()==this.min) cur.setParent(null);
+ 		if(cur.getKey()<minVal) {//updating min.
+ 			minVal = cur.getKey();
+ 		}
+ 		insertNodeToBuckets(buckets, cur);
+
+     	
+     	this.first = null;
+     	HeapNode prev = null;
+     	cur = null;
+     	HeapNode last = null;
+     	int counter = 0;
+     	for(HeapNode node : buckets) {
+     		if(this.first == null && node != null) this.first = node;
+     		if(node != null) {
+     			counter++;
+     			if(node.getKey() == minVal) this.min = node;
+     			cur = node;
+     			if(prev != null) {
+     				cur.setLeft(prev);
+         			prev.setRight(cur);
+     			}
+     			prev = cur;
+     			last = cur;
+     		}
+     	}
+     	last.setRight(this.first);
+     	this.first.setLeft(last);
+     	this.size-=1;
+    }
+    
+    //inserts the tree's pointer to the array and links accordingly:
+    public void insertNodeToBuckets(HeapNode[] buckets, HeapNode tree) {
+    	HeapNode slot = buckets[tree.getRank()];
+    	if(slot==null) {
+    		//put in bucket:
+    		buckets[tree.getRank()]=tree;
+    		//uproot:
+    		if(tree.getLeft()!=null && tree.getRight()!=null) {
+    			tree.getLeft().setRight(tree.getRight());
+    			tree.getRight().setLeft(tree.getLeft());
+    			tree.setLeft(tree);
+    			tree.setRight(tree);
+    		}
+    	}
+    	else {
+    		buckets[tree.getRank()]=null;
+    		HeapNode linked = link(slot, tree);//the new pointer to the combined tree
+    		
+    		insertNodeToBuckets(buckets,linked);
+    	}
+    	
+    	
+    	
+    }
+    
+    //link and returns pointer to new combine tree
+    public HeapNode link(HeapNode t1, HeapNode t2) {
+    	if(t1.getKey()<t2.getKey()) {
+    		//removing pointers from neighbors to t2 (digging a hole/uprooting):
+    		if(t2.getLeft()!=null && t2.getRight()!=null) {
+	    		t2.getLeft().setRight(t2.getRight());
+	    		t2.getRight().setLeft(t2.getLeft());
+    		}
+    		//setting t2 3 directions (plant):
+    		t2.setParent(t1);
+    		if(t1.getChild()!=null) {
+	    		t2.setRight(t1.getChild());
+	    		t2.setLeft(t1.getChild().getLeft());
+    		}
+    		//point all neighbors to t2 (cover with soil):
+    		if(t1.getChild()!=null) {
+	    		t1.getChild().getLeft().setRight(t2);
+	    		t1.getChild().setLeft(t2);
+    		}
+    		t1.setChild(t2);
+    		//change rank of t1 (water?):
+    		t1.setRank(t1.getRank()+1);
+    		//removing pointers from neighbors to t1 (uprooting):
+    		if(t1.getLeft()!=null && t1.getRight()!=null) {
+	    		t1.getLeft().setRight(t1.getRight());
+	    		t1.getRight().setLeft(t1.getLeft());
+    		}
+    		return t1;
+    	}else {
+    		//removing pointers from neighbors to t1 (digging a hole/uprooting):
+    		if(t1.getLeft()!=null && t1.getRight()!=null) {
+	    		t1.getLeft().setRight(t1.getRight());
+	    		t1.getRight().setLeft(t1.getLeft());
+    		}
+    		//setting t1 3 directions (plant):
+    		t1.setParent(t2);
+    		if(t2.getChild()!=null) {
+	    		t1.setRight(t2.getChild());
+	    		t1.setLeft(t2.getChild().getLeft());
+    		}
+    		//point all neighbors to t1 (cover with soil):
+    		if(t2.getChild()!=null) {
+	    		t2.getChild().getLeft().setRight(t1);
+	    		t2.getChild().setLeft(t1);
+    		}
+    		t2.setChild(t1);
+    		//change rank of t2 (water?):
+    		t2.setRank(t2.getRank()+1);
+    		//removing pointers from neighbors to t2 (uprooting):
+    		if(t2.getLeft()!=null && t2.getRight()!=null) {
+	    		t2.getLeft().setRight(t2.getRight());
+	    		t2.getRight().setLeft(t2.getLeft());
+    		}
+    		return t2;
+    	}
     }
 
    /**
@@ -71,7 +241,7 @@ public class FibonacciHeap
     */
     public HeapNode findMin()
     {
-    	return new HeapNode(678);// should be replaced by student code
+    	return min;
     } 
     
    /**
@@ -80,9 +250,17 @@ public class FibonacciHeap
     * Melds heap2 with the current heap.
     *
     */
-    public void meld (FibonacciHeap heap2)
+    public void meld(FibonacciHeap heap2)
     {
-    	  return; // should be replaced by student code   		
+    	//connecting relations:
+    	this.first.getLeft().setRight(heap2.getFirst());
+    	this.first.setLeft(heap2.getFirst().getLeft());
+    	heap2.getFirst().getLeft().setRight(this.first);
+    	heap2.getFirst().setLeft(this.first.getLeft());
+    	//updating size:
+    	this.size += heap2.getSize();
+    	//updating min:
+    	if(heap2.getMin().getKey()<this.min.getKey()) this.min=heap2.getMin();
     }
 
    /**
@@ -93,7 +271,7 @@ public class FibonacciHeap
     */
     public int size()
     {
-    	return -123; // should be replaced by student code
+    	return size;
     }
     	
     /**
@@ -209,16 +387,21 @@ public class FibonacciHeap
     	private HeapNode parent;
     	private HeapNode child;
     	private boolean mark; 
+    	private int rank;
     	public int key;
+    	
     	
 
     	public HeapNode(int key) {
     		this.key = key;
-    		this.mark = 0;
+    		this.mark = false;
     	}
-
+    	
     	public int getKey() {
     		return this.key;
+    	}
+    	public int getRank() {
+    		return this.rank;
     	}
     	public boolean getMark() {
     		return this.mark;
@@ -229,6 +412,12 @@ public class FibonacciHeap
     	public HeapNode getLeft() {
     		return this.left;
     	}
+    	public HeapNode getNext() {
+    		return this.right;
+    	}
+    	public HeapNode getPrev() {
+    		return this.left;
+    	}
     	public HeapNode getParent() {
     		return this.parent;
     	}
@@ -236,24 +425,43 @@ public class FibonacciHeap
     		return this.child;
     	}
     	
-
-    	public int setKey(int key) {
-    		this.key;
+    	
+    	public void setKey(int key) {
+    		this.key = key;
     	}
-    	public boolean setMark(boolean mark) {
+    	public void setRank(int r) {
+    		this.rank = r;
+    	}
+    	public void setMark(boolean mark) {
     		this.mark = mark;
     	}
-    	public HeapNode setRight(HeapNode r) {
+    	public void setRight(HeapNode r) {
     		this.right = r;
     	}
-    	public HeapNode setLeft(HeapNode l) {
+    	public void setLeft(HeapNode l) {
     		this.left = l;
     	}
-    	public HeapNode setParent(HeapNode p) {
+    	public void setNext(HeapNode r) {
+    		this.right = r;
+    	}
+    	public void setPrev(HeapNode l) {
+    		this.left = l;
+    	}
+    	public void setParent(HeapNode p) {
     		this.parent = p;
     	}
-    	public HeapNode setChild(HeapNode c) {
+    	public void setChild(HeapNode c) {
     		this.child = c;
     	}
+    	
+    	/*public String toString() {
+    		return  "key: "+key+"\n"+
+    				"mark: "+mark+"\n"+
+    				"rank: "+rank+"\n"+
+    				"right: "+right+"\n"+
+    				"left: "+left+"\n"+
+    				"parent: "+parent+"\n"+
+    				"child: "+child+"\n";
+    	}*/
     }
 }
